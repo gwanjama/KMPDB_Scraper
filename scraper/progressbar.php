@@ -3,13 +3,14 @@ session_start();
 
 ini_set('max_execution_time', 0); // to get unlimited php script execution time
 
+$doctors = Array();
 
 function scrapeData(){
 	require_once('simple_html_dom.php');
 	include_once("doctor.php");
 
 	$first_page = 1;
-	$last_page = 285;
+	$last_page = 288;
 	$docs = array();
 	$file = 'doctors.txt';
 	$count = 0;
@@ -42,13 +43,14 @@ function scrapeData(){
 	
 		//sleep(1); // Here call your time taking function like sending bulk sms etc.
 		
-
+        /*
 		echo '<script>
 		parent.document.getElementById("progressbar").innerHTML="<div style=\"width:'.$percent.';background:linear-gradient(to bottom, rgba(125,126,125,1) 0%,rgba(14,14,14,1) 100%); ;height:35px;\">&nbsp;</div>";
 		parent.document.getElementById("information").innerHTML="<div style=\"text-align:center; font-weight:bold\">page '.$first_page.' through to '.$last_page.'<br>'.$percent.' is processed.</div>";</script>';
+        */
 
-		ob_flush(); 
-		flush(); 
+		//ob_flush(); 
+		//flush(); 
 		
 		$count++;
 
@@ -66,13 +68,57 @@ function scrapeData(){
 		$doctor = new Doctor($name, $regDate, $regID, $address, $qualifications, $specialty, $subSpecialty);
 
 		//echo ($k+1)." - ".$doctor->name." - ".$doctor->regID." - ".$doctor->regDate."<br>";
+        
+        /*
 
 		$current = file_get_contents($file);
 		$current .= ($k+1)." - ".$doctor->name." (".$doctor->regID.")\n";
 		file_put_contents($file, $current);
+        */
+        $dArray = Array();
+        $dArray["#"] = ($k+1);
+        $dArray["Names"] = $doctor->name;
+        $dArray["Registration ID"] = $doctor->regID;
+        $dArray["Registration Date"] = $doctor->regDate;
+        $dArray["Address"] = $doctor->address;
+        $dArray["Qualifications"] = $doctor->qualifications;
+        $dArray["Specialty"] = $doctor->specialty;
+        $dArray["Sub Specialty"] = $doctor->subSpecialty;
+        
+        $doctors[] = $dArray;
 	}
 	
-	echo '<script>parent.document.getElementById("information").innerHTML="<div style=\"text-align:center; font-weight:bold\">Process completed</div>"</script>';
+	/*
+    echo '<script>parent.document.getElementById("information").innerHTML="<div style=\"text-align:center; font-weight:bold\">Process completed</div>"</script>';
+    */
+    
+    @ob_start();
+	session_start();
+    $filename = "KMPDB_Doctors_Retention_List_".date("Y-m-d-Gis").".xls";     
+    //$filename = "KMPDB_Doctors_Retention_List.xls";     
+    ob_end_clean();  
+    header("Content-Type: application/vnd.ms-excel");
+    header("Content-Disposition: attachment; filename=\"$filename\"");
+    ExportFile($doctors);
+}
+
+
+function ExportFile($records) {
+    $heading = false;
+    if(!empty($records)){
+        foreach($records as $row) {
+            if(!$heading) {
+                // display field/column names as a first row
+                echo implode("\t", array_keys($row)) . "\n";
+                $heading = true;
+            }
+            $row = preg_replace("/\t/", "\\t", $row);
+            $row = preg_replace("/\r?\n/", "\\n", $row);	
+
+            echo implode("\t", array_values($row)) . "\n";
+        }
+        exit;
+    }
 }
 
 scrapeData();
